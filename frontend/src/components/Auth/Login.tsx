@@ -1,6 +1,7 @@
- import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } from 'react-icons/fi';
+import { useAuth } from '../../contexts/useAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,7 +11,26 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the page user tried to visit before being redirected to login
+  interface LocationState {
+    from?: {
+      pathname: string;
+    };
+  }
+
+  const from = (location.state as LocationState)?.from?.pathname || '/';
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -25,20 +45,27 @@ const Login = () => {
     setLoading(true);
     setError('');
 
-    // Simulated authentication - backend gelince gerçek API call yapılacak
     try {
-      // Fake delay
+      // Fake delay to simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Fake validation
+      // Fake validation - backend gelince gerçek API call yapılacak
       if (formData.email === 'demo@example.com' && formData.password === 'demo123') {
-        localStorage.setItem('user', JSON.stringify({ email: formData.email, name: 'Demo User' }));
-        navigate('/');
+        const user = {
+          email: formData.email,
+          name: 'Demo User'
+        };
+
+        // Use auth context to login
+        login(user);
+
+        // Navigate to the page user tried to visit, or dashboard
+        navigate(from, { replace: true });
       } else {
         setError('Invalid email or password');
       }
-    } catch (err) {
-      console.error(err); // Log the error for debugging
+    } catch (error) {
+      console.error('Login error:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -51,7 +78,7 @@ const Login = () => {
         <div className="auth-header">
           <Link to="/" className="back-link">
             <FiArrowLeft size={16} />
-            Back to Dashboard
+            Back to Home
           </Link>
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../contexts/useAuth';
 
 const Login = () => {
@@ -75,13 +75,6 @@ const Login = () => {
   return (
     <div className="auth-container">
       <div className="auth-content">
-        <div className="auth-header">
-          <Link to="/" className="back-link">
-            <FiArrowLeft size={16} />
-            Back to Home
-          </Link>
-        </div>
-
         <div className="auth-card">
           <div className="auth-card-header">
             <h1>Welcome Back</h1>

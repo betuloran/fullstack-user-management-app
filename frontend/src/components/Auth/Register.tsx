@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowLeft } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAuth } from '../../contexts/useAuth';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +14,16 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -52,11 +62,16 @@ const Register = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Simulate successful registration
-      localStorage.setItem('user', JSON.stringify({
+      const user = {
         email: formData.email,
         name: formData.name
-      }));
-      navigate('/');
+      };
+
+      // Use auth context to login after registration
+      login(user);
+
+      // Navigate to dashboard
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Registration error:', error);
       setError('Registration failed. Please try again.');
@@ -68,13 +83,6 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-content">
-        <div className="auth-header">
-          <Link to="/" className="back-link">
-            <FiArrowLeft size={16} />
-            Back to Dashboard
-          </Link>
-        </div>
-
         <div className="auth-card">
           <div className="auth-card-header">
             <h1>Create Account</h1>

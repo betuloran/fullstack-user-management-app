@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthProvider';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './components/Dashboard/Dashboard';
@@ -15,6 +16,7 @@ import './styles/auth.css';
 
 function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <Router>
         <Routes>
@@ -41,7 +43,8 @@ function App() {
           } />
         </Routes>
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+      </ThemeProvider>
   );
 }
 

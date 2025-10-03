@@ -82,6 +82,16 @@ const Navbar = () => {
         </ul>
 
         <div className="nav-actions">
+          <div className="user-info">
+            <span className="user-name">Welcome, {user?.name}</span>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="btn btn-secondary btn-sm logout-btn"
+          >
+            <FiLogOut size={16} />
+            Logout
+          </button>
           <button
             onClick={toggleTheme}
             className="theme-toggle"
@@ -101,16 +111,6 @@ const Navbar = () => {
               <path d="M27.5 11.5v-7h-7L16 0l-4.5 4.5h-7v7L0 16l4.5 4.5v7h7L16 32l4.5-4.5h7v-7L32 16l-4.5-4.5zM16 25.4a9.39 9.39 0 1 1 0-18.8 9.39 9.39 0 1 1 0 18.8z" />
               <circle cx="16" cy="16" r="8.1" />
             </svg>
-          </button>
-          <div className="user-info">
-            <span className="user-name">Welcome, {user?.name}</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="btn btn-secondary btn-sm logout-btn"
-          >
-            <FiLogOut size={16} />
-            Logout
           </button>
         </div>
       </div>

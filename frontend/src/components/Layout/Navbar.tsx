@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FiHome, FiUsers, FiFileText, FiLogIn, FiUserPlus, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiUsers, FiFileText, FiLogIn, FiUserPlus, FiLogOut, FiSun, FiMoon } from 'react-icons/fi';
 import { useAuth } from '../../contexts/useAuth';
+import { useTheme } from '../../contexts/useTheme';
 
 const Navbar = () => {
   const location = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -12,7 +14,6 @@ const Navbar = () => {
     logout();
   };
 
-  // If user is not authenticated, show minimal navbar
   if (!isAuthenticated) {
     return (
       <nav className="navbar">
@@ -22,6 +23,13 @@ const Navbar = () => {
           </Link>
 
           <div className="nav-actions">
+            <button
+              onClick={toggleTheme}
+              className="btn btn-secondary btn-sm theme-toggle"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <FiMoon size={16} /> : <FiSun size={16} />}
+            </button>
             <Link to="/login" className="btn btn-secondary btn-sm">
               <FiLogIn size={16} />
               Login
@@ -36,7 +44,6 @@ const Navbar = () => {
     );
   }
 
-  // If user is authenticated, show full navbar
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -75,6 +82,26 @@ const Navbar = () => {
         </ul>
 
         <div className="nav-actions">
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            type="button"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              width="1em"
+              height="1em"
+              fill="currentColor"
+              className="theme-toggle__inner-moon"
+              viewBox="0 0 32 32"
+            >
+              <path d="M27.5 11.5v-7h-7L16 0l-4.5 4.5h-7v7L0 16l4.5 4.5v7h7L16 32l4.5-4.5h7v-7L32 16l-4.5-4.5zM16 25.4a9.39 9.39 0 1 1 0-18.8 9.39 9.39 0 1 1 0 18.8z" />
+              <circle cx="16" cy="16" r="8.1" />
+            </svg>
+          </button>
           <div className="user-info">
             <span className="user-name">Welcome, {user?.name}</span>
           </div>

@@ -1,70 +1,134 @@
 import axios from 'axios';
-import type { User, Post } from '../types';
 
-const API_BASE_URL = 'https://jsonplaceholder.typicode.com';
+const API_BASE = 'http://localhost:5001/api';
 
+// Axios instance oluştur
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 });
 
-// User API calls
+// Request interceptor - her request'e token ekle
+api.interceptors.request.use(
+  (config) => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      // Token varsa header'a ekle
+      if (userData.token) {
+        config.headers.Authorization = `Bearer ${userData.token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// User API
 export const userAPI = {
-  getAll: async (): Promise<User[]> => {
-    const response = await api.get<User[]>('/users');
+  getAll: async () => {
+    const response = await api.get('/users');
+    return response.data.data;
+  },
+  
+  getById: async (id: number | string) => {
+    const response = await api.get(`/users/${id}`);
+    return response.data.data;
+  },
+  
+  create: async (userData: { 
+    name: string; 
+    username: string;
+    email: string; 
+    password: string;
+    role?: string;
+  }) => {
+    const response = await api.post('/users', userData);
+    return response.data.data;
+  },
+  
+  update: async (id: number | string, userData: { 
+    name?: string; 
+    username?: string;
+    email?: string;
+  }) => {
+    const response = await api.put(`/users/${id}`, userData);
+    return response.data.data;
+  },
+  
+  delete: async (id: number | string) => {
+    const response = await api.delete(`/users/${id}`);
     return response.data;
-  },
-
-  getById: async (id: number): Promise<User> => {
-    const response = await api.get<User>(`/users/${id}`);
-    return response.data;
-  },
-
-  create: async (user: Partial<User>): Promise<User> => {
-    const response = await api.post<User>('/users', user);
-    return response.data;
-  },
-
-  update: async (id: number, user: Partial<User>): Promise<User> => {
-    const response = await api.put<User>(`/users/${id}`, user);
-    return response.data;
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/users/${id}`);
-  },
+  }
 };
 
-// Post API calls
+// Post API
 export const postAPI = {
-  getAll: async (): Promise<Post[]> => {
-    const response = await api.get<Post[]>('/posts');
+  getAll: async () => {
+    const response = await api.get('/posts');
+    return response.data.data;
+  },
+  
+  getByUserId: async (userId: number | string) => {
+    const response = await api.get(`/posts?userId=${userId}`);
+    return response.data.data;
+  },
+  
+  getById: async (id: number | string) => {
+    const response = await api.get(`/posts/${id}`);
+    return response.data.data;
+  },
+  
+  create: async (postData: { 
+    title: string; 
+    body: string;      
+    userId?: string;
+  }) => {
+    const response = await api.post('/posts', postData);
+    return response.data.data;
+  },
+  
+  update: async (id: number | string, postData: { 
+    title?: string; 
+    body?: string;    
+  }) => {
+    const response = await api.put(`/posts/${id}`, postData);
+    return response.data.data;
+  },
+  
+  delete: async (id: number | string) => {
+    const response = await api.delete(`/posts/${id}`);
+    return response.data;
+  }
+};
+
+// Auth API
+export const authAPI = {
+  register: async (userData: { 
+    name: string;
+    username: string;
+    email: string; 
+    password: string;
+    role?: string;
+  }) => {
+    const response = await api.post('/auth/register', userData);
     return response.data;
   },
-
-  getById: async (id: number): Promise<Post> => {
-    const response = await api.get<Post>(`/posts/${id}`);
+  
+  login: async (credentials: { 
+    email: string; 
+    password: string;
+  }) => {
+    const response = await api.post('/auth/login', credentials);
     return response.data;
   },
-
-  getByUserId: async (userId: number): Promise<Post[]> => {
-    const response = await api.get<Post[]>(`/posts?userId=${userId}`);
+  
+  getMe: async () => {
+    const response = await api.get('/auth/me');
     return response.data;
-  },
-
-  create: async (post: Partial<Post>): Promise<Post> => {
-    const response = await api.post<Post>('/posts', post);
-    return response.data;
-  },
-
-  update: async (id: number, post: Partial<Post>): Promise<Post> => {
-    const response = await api.put<Post>(`/posts/${id}`, post);
-    return response.data;
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/posts/${id}`);
-  },
+  }
 };

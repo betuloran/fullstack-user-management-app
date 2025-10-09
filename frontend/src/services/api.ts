@@ -15,15 +15,32 @@ api.interceptors.request.use(
   (config) => {
     const user = localStorage.getItem('user');
     if (user) {
-      const userData = JSON.parse(user);
-      // Token varsa header'a ekle
-      if (userData.token) {
-        config.headers.Authorization = `Bearer ${userData.token}`;
+      try {
+        const userData = JSON.parse(user);
+        // Token varsa header'a ekle
+        if (userData.token) {
+          config.headers.Authorization = `Bearer ${userData.token}`;
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
       }
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - 401 hatalarını yakala
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token geçersizse logout yap
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

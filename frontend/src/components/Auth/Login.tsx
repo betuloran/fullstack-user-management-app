@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../contexts/useAuth';
+import { authAPI } from '../../services/api';
+
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
+}
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -16,16 +23,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the page user tried to visit before being redirected to login
-  interface LocationState {
-    from?: {
-      pathname: string;
-    };
-  }
-
   const from = (location.state as LocationState)?.from?.pathname || '/';
 
-  // If already authenticated, redirect to dashboard
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from, { replace: true });
@@ -37,7 +36,7 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    if (error) setError(''); // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,27 +45,30 @@ const Login = () => {
     setError('');
 
     try {
-      // Fake delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Backend API'ye login request gönder
+      const response = await authAPI.login({
+        email: formData.email,
+        password: formData.password
+      });
 
-      // Fake validation - backend gelince gerçek API call yapılacak
-      if (formData.email === 'demo@example.com' && formData.password === 'demo123') {
-        const user = {
-          email: formData.email,
-          name: 'Demo User'
+      if (response.success) {
+        // User bilgisini ve token'ı localStorage'a kaydet
+        const userData = {
+          ...response.user,
+          token: response.token
         };
 
-        // Use auth context to login
-        login(user);
+        localStorage.setItem('user', JSON.stringify(userData));
 
-        // Navigate to the page user tried to visit, or dashboard
+        // Auth context'e login bilgisini ver
+        login(response.user);
+
+        // Dashboard'a yönlendir
         navigate(from, { replace: true });
-      } else {
-        setError('Invalid email or password');
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('An error occurred. Please try again.');
+      setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -157,11 +159,11 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Demo credentials info */}
+          {/* Demo credentials info - Backend'deki gerçek kullanıcı */}
           <div className="demo-info">
             <p><strong>Demo Credentials:</strong></p>
-            <p>Email: demo@example.com</p>
-            <p>Password: demo123</p>
+            <p>Email: testuser@example.com</p>
+            <p>Password: 123456</p>
           </div>
         </div>
       </div>

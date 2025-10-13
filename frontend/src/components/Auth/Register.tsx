@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../contexts/useAuth';
+import { authAPI } from '../../services/api';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -18,7 +20,6 @@ const Register = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // If already authenticated, redirect to dashboard
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
@@ -34,7 +35,7 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError('All fields are required');
       return false;
     }
@@ -58,23 +59,32 @@ const Register = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simulate successful registration
-      const user = {
+      // Backend API'ye register request gönder
+      const response = await authAPI.register({
+        name: formData.name,
+        username: formData.username,
         email: formData.email,
-        name: formData.name
-      };
+        password: formData.password
+      });
 
-      // Use auth context to login after registration
-      login(user);
+      if (response.success) {
+        // User bilgisini ve token'ı localStorage'a kaydet
+        const userData = {
+          ...response.user,
+          token: response.token
+        };
 
-      // Navigate to dashboard
-      navigate('/', { replace: true });
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        // Auth context'e login bilgisini ver
+        login(response.user);
+
+        // Dashboard'a yönlendir
+        navigate('/', { replace: true });
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      setError('Registration failed. Please try again.');
+      setError('Registration failed. Username or email may already exist.');
     } finally {
       setLoading(false);
     }
@@ -110,6 +120,24 @@ const Register = () => {
                   placeholder="Enter your full name"
                   required
                   autoComplete="name"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="username" className="form-label">Username</label>
+              <div className="input-wrapper">
+                <FiUser className="input-icon" />
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  className="form-input"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="Choose a username"
+                  required
+                  autoComplete="username"
                 />
               </div>
             </div>

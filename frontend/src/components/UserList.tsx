@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { User } from '../types';
 import { userAPI, postAPI } from '../services/api';
 import './UserList.css';
 import { FaEdit, FaPlus, FaTrash, FaSearch, FaSave, FaTimes } from 'react-icons/fa';
@@ -9,23 +8,43 @@ import { LiaTimesSolid } from 'react-icons/lia';
 import Modal from './Modal';
 import Toast from './Toast';
 
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface Post {
+  _id: string;
+  title: string;
+  body: string;
+  userId: string | { _id: string };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
 const UserList = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [editingUser, setEditingUser] = useState<number | null>(null);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<User>>({});
   const [addFormData, setAddFormData] = useState<Partial<User>>({});
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [userPosts, setUserPosts] = useState<{ [key: number]: number }>({});
+  const [userPosts, setUserPosts] = useState<{ [key: string]: number }>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const [emailError, setEmailError] = useState<string>('');
 
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: number | null }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string | null }>({
     isOpen: false,
     userId: null
   });
@@ -44,6 +63,7 @@ const UserList = () => {
     } catch (err) {
       setError('Failed to fetch users');
       console.error(err);
+      setToast({ show: true, message: 'Failed to load users', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -52,9 +72,11 @@ const UserList = () => {
   const fetchPostCounts = async () => {
     try {
       const posts = await postAPI.getAll();
-      const counts: { [key: number]: number } = {};
-      posts.forEach(post => {
-        counts[post.userId] = (counts[post.userId] || 0) + 1;
+      const counts: { [key: string]: number } = {};
+      posts.forEach((post: Post) => {
+        // userId string veya object olabilir (populated)
+        const userId = typeof post.userId === 'string' ? post.userId : post.userId._id;
+        counts[userId] = (counts[userId] || 0) + 1;
       });
       setUserPosts(counts);
     } catch (err) {
@@ -73,7 +95,7 @@ const UserList = () => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setDeleteModal({ isOpen: true, userId: id });
   };
 
@@ -81,8 +103,9 @@ const UserList = () => {
     if (deleteModal.userId) {
       try {
         await userAPI.delete(deleteModal.userId);
-        setUsers(users.filter(user => user.id !== deleteModal.userId));
+        setUsers(users.filter(user => user._id !== deleteModal.userId));
         setToast({ show: true, message: 'User deleted successfully!', type: 'success' });
+        fetchPostCounts(); // Refresh post counts
       } catch (err) {
         setToast({ show: true, message: 'Failed to delete user', type: 'error' });
         console.error(err);
@@ -92,7 +115,7 @@ const UserList = () => {
   };
 
   const handleEdit = (user: User) => {
-    setEditingUser(user.id);
+    setEditingUser(user._id);
     setEditFormData({
       name: user.name,
       username: user.username,
@@ -102,23 +125,21 @@ const UserList = () => {
     setShowAddForm(false);
   };
 
-  const handleUpdate = async (id: number) => {
+  const handleUpdate = async (id: string) => {
     try {
       if (!editFormData.email || !validateEmail(editFormData.email)) {
-        setEmailError('Please enter a valid email address (must contain @gmail.com)');
+        setEmailError('Please enter a valid email address');
         setToast({ show: true, message: 'Invalid email format', type: 'error' });
         return;
       }
 
-      const user = users.find(u => u.id === id);
+      const updatedUser = await userAPI.update(id, {
+        name: editFormData.name,
+        username: editFormData.username,
+        email: editFormData.email
+      });
 
-      if (user?.isLocal) {
-        setUsers(users.map(u => u.id === id ? { ...u, ...editFormData } : u));
-      } else {
-        await userAPI.update(id, editFormData);
-        setUsers(users.map(u => u.id === id ? { ...u, ...editFormData } : u));
-      }
-
+      setUsers(users.map(u => u._id === id ? { ...u, ...updatedUser } : u));
       setEditingUser(null);
       setEditFormData({});
       setEmailError('');
@@ -137,25 +158,28 @@ const UserList = () => {
       }
 
       if (!validateEmail(addFormData.email)) {
-        setEmailError('Please enter a valid email address (must contain @gmail.com)');
+        setEmailError('Please enter a valid email address');
         setToast({ show: true, message: 'Invalid email format', type: 'error' });
         return;
       }
 
-      const newUser = await userAPI.create(addFormData);
-      const uniqueUser = {
-        ...newUser,
-        id: Math.max(...users.map(u => u.id)) + 1,
-        isLocal: true
-      };
-      setUsers([...users, uniqueUser]);
+      await userAPI.create({
+        name: addFormData.name!,
+        username: addFormData.username!,
+        email: addFormData.email!,
+        password: '123456' // Default password
+      });
+
+      // Refresh user list
+      await fetchUsers();
+
       setShowAddForm(false);
       setAddFormData({});
       setEmailError('');
-      setToast({ show: true, message: 'User added successfully!', type: 'success' });
+      setToast({ show: true, message: 'User added successfully! Default password: 123456', type: 'success' });
     } catch (err) {
-      setToast({ show: true, message: 'Failed to add user', type: 'error' });
-      console.error(err);
+      console.error('Add user error:', err);
+      setToast({ show: true, message: 'Failed to add user. Username or email may already exist.', type: 'error' });
     }
   };
 
@@ -237,6 +261,9 @@ const UserList = () => {
             />
             {emailError && <span className="error-message">{emailError}</span>}
           </div>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            Default password will be: 123456
+          </p>
           <div className="form-actions">
             <button onClick={handleAdd} className="btn-save">Save</button>
             <button onClick={handleCancel} className="btn-cancel">Cancel</button>
@@ -248,7 +275,6 @@ const UserList = () => {
         <table className="user-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Name</th>
               <th>Username</th>
               <th>Email</th>
@@ -259,16 +285,15 @@ const UserList = () => {
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="no-results">
+                <td colSpan={5} className="no-results">
                   {searchTerm ? 'No users found matching your search' : 'No users available'}
                 </td>
               </tr>
             ) : (
               filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
+                <tr key={user._id}>
                   <td>
-                    {editingUser === user.id ? (
+                    {editingUser === user._id ? (
                       <input
                         type="text"
                         value={editFormData.name || ''}
@@ -279,7 +304,7 @@ const UserList = () => {
                     )}
                   </td>
                   <td>
-                    {editingUser === user.id ? (
+                    {editingUser === user._id ? (
                       <input
                         type="text"
                         value={editFormData.username || ''}
@@ -290,7 +315,7 @@ const UserList = () => {
                     )}
                   </td>
                   <td>
-                    {editingUser === user.id ? (
+                    {editingUser === user._id ? (
                       <div className="input-wrapper">
                         <input
                           type="email"
@@ -305,14 +330,14 @@ const UserList = () => {
                     )}
                   </td>
                   <td>
-                    <Link to={`/posts?userId=${user.id}`} className="posts-link">
-                      {userPosts[user.id] || 0} posts
+                    <Link to={`/posts?userId=${user._id}`} className="posts-link">
+                      {userPosts[user._id] || 0} posts
                     </Link>
                   </td>
                   <td className="actions">
-                    {editingUser === user.id ? (
+                    {editingUser === user._id ? (
                       <>
-                        <button onClick={() => handleUpdate(user.id)} className="btn-save">
+                        <button onClick={() => handleUpdate(user._id)} className="btn-save">
                           <FaSave /> Save
                         </button>
                         <button onClick={handleCancel} className="btn-cancel">
@@ -324,7 +349,7 @@ const UserList = () => {
                         <button onClick={() => handleEdit(user)} className="btn-edit">
                           <FaEdit /> Edit
                         </button>
-                        <button onClick={() => handleDelete(user.id)} className="btn-delete">
+                        <button onClick={() => handleDelete(user._id)} className="btn-delete">
                           <FaTrash /> Delete
                         </button>
                       </>
@@ -339,7 +364,7 @@ const UserList = () => {
         <Modal
           isOpen={deleteModal.isOpen}
           title="Delete User"
-          message={`Are you sure you want to delete ${users.find(u => u.id === deleteModal.userId)?.name}? This action cannot be undone.`}
+          message={`Are you sure you want to delete ${users.find(u => u._id === deleteModal.userId)?.name}? This action cannot be undone.`}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteModal({ isOpen: false, userId: null })}
           confirmText="Delete"

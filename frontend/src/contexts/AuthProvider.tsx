@@ -4,8 +4,10 @@ import type { ReactNode } from 'react';
 export interface User {
   email: string;
   name: string;
+  username?: string;
+  role?: string;
+  token?: string;  
 }
-
 export interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
@@ -25,7 +27,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in when app starts
+  // Uygulama başlatıldığında kullanıcının oturum açıp açmadığını kontrol et
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {

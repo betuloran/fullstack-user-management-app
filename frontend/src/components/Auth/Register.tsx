@@ -68,18 +68,25 @@ const Register = () => {
       });
 
       if (response.success) {
-        // User bilgisini ve token'ı localStorage'a kaydet
-        const userData = {
-          ...response.user,
+        const userDataForStorage = {
+          id: response.user.id,
+          name: response.user.name,
+          username: response.user.username,
+          email: response.user.email,
+          role: response.user.role,
           token: response.token
         };
 
-        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(userDataForStorage));
 
-        // Auth context'e login bilgisini ver
-        login(response.user);
+        login({
+          name: response.user.name,
+          email: response.user.email,
+          username: response.user.username,
+          role: response.user.role,
+          token: response.token
+        });
 
-        // Dashboard'a yönlendir
         navigate('/', { replace: true });
       }
     } catch (error) {

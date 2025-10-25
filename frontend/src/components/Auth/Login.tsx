@@ -45,25 +45,36 @@ const Login = () => {
     setError('');
 
     try {
-      // Backend API'ye login request gönder
       const response = await authAPI.login({
         email: formData.email,
         password: formData.password
       });
 
-      if (response.success) {
-        // User bilgisini ve token'ı localStorage'a kaydet
-        const userData = {
-          ...response.user,
+      console.log('Login response:', response); // Debug için
+
+      if (response.success && response.token) {
+        // Token'ı localStorage'a kaydet
+        localStorage.setItem('authToken', response.token);
+
+        // User bilgisini token ile birlikte kaydet
+        localStorage.setItem('user', JSON.stringify({
+          name: response.user.name,
+          email: response.user.email,
+          username: response.user.username,
+          role: response.user.role,
           token: response.token
-        };
+        }));
 
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Auth context'e user bilgisini tokenla birlikte ver
+        login({
+          name: response.user.name,
+          email: response.user.email,
+          username: response.user.username,
+          role: response.user.role,
+          token: response.token  
+        });
 
-        // Auth context'e login bilgisini ver
-        login(response.user);
-
-        // Dashboard'a yönlendir
+        console.log('Token saved successfully');
         navigate(from, { replace: true });
       }
     } catch (error) {
@@ -159,7 +170,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Demo credentials info - Backend'deki gerçek kullanıcı */}
+          {/* Demo credentials info */}
           <div className="demo-info">
             <p><strong>Demo Credentials:</strong></p>
             <p>Email: testuser@example.com</p>

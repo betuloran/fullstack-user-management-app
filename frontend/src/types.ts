@@ -29,7 +29,6 @@ export interface Post {
   body?: string;
   isLocal?: boolean;
 }
-
 export interface FormData {
   user?: Partial<User>;
   post?: Partial<Post>;

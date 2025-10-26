@@ -103,7 +103,7 @@ export const postAPI = {
   create: async (postData: { 
     title: string; 
     body: string;      
-    userId?: string;
+    userId?: number;
   }) => {
     const response = await api.post('/posts', postData);
     return response.data.data;
@@ -111,7 +111,8 @@ export const postAPI = {
   
   update: async (id: number | string, postData: { 
     title?: string; 
-    body?: string;    
+    body?: string;   
+    userId?: number;
   }) => {
     const response = await api.put(`/posts/${id}`, postData);
     return response.data.data;

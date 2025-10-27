@@ -39,6 +39,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token geçersizse logout yap
       localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -52,7 +53,7 @@ export const userAPI = {
     return response.data.data;
   },
   
-  getById: async (id: number | string) => {
+  getById: async (id: string) => {
     const response = await api.get(`/users/${id}`);
     return response.data.data;
   },
@@ -68,7 +69,7 @@ export const userAPI = {
     return response.data.data;
   },
   
-  update: async (id: number | string, userData: { 
+  update: async (id: string, userData: { 
     name?: string; 
     username?: string;
     email?: string;
@@ -77,7 +78,7 @@ export const userAPI = {
     return response.data.data;
   },
   
-  delete: async (id: number | string) => {
+  delete: async (id: string) => {
     const response = await api.delete(`/users/${id}`);
     return response.data;
   }
@@ -90,12 +91,12 @@ export const postAPI = {
     return response.data.data;
   },
   
-  getByUserId: async (userId: number | string) => {
+  getByUserId: async (userId: string) => {
     const response = await api.get(`/posts?userId=${userId}`);
     return response.data.data;
   },
   
-  getById: async (id: number | string) => {
+  getById: async (id: string) => {
     const response = await api.get(`/posts/${id}`);
     return response.data.data;
   },
@@ -103,22 +104,21 @@ export const postAPI = {
   create: async (postData: { 
     title: string; 
     body: string;      
-    userId?: number;
+    userId?: string;
   }) => {
     const response = await api.post('/posts', postData);
     return response.data.data;
   },
   
-  update: async (id: number | string, postData: { 
+  update: async (id: string, postData: { 
     title?: string; 
-    body?: string;   
-    userId?: number;
+    body?: string;
   }) => {
     const response = await api.put(`/posts/${id}`, postData);
     return response.data.data;
   },
   
-  delete: async (id: number | string) => {
+  delete: async (id: string) => {
     const response = await api.delete(`/posts/${id}`);
     return response.data;
   }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { Post, User } from '../types';
 import { postAPI, userAPI } from '../services/api';
 import './PostList.css';
 import { FaEdit, FaPlus, FaTrash, FaSearch, FaSave, FaTimes } from 'react-icons/fa';
@@ -8,6 +7,24 @@ import { IoArrowBack } from 'react-icons/io5';
 import { LiaTimesSolid } from 'react-icons/lia';
 import Modal from './Modal';
 import Toast from './Toast';
+
+// Backend'den gelen veri yapısına uygun interface'ler
+interface User {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+}
+
+interface Post {
+  _id: string;
+  title: string;
+  body: string;
+  userId: string; 
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 const PostList = () => {
   const [searchParams] = useSearchParams();
@@ -18,25 +35,23 @@ const PostList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [editingPost, setEditingPost] = useState<number | null>(null);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Post>>({});
   const [addFormData, setAddFormData] = useState<Partial<Post>>({});
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(
-    userIdParam ? parseInt(userIdParam) : null
-  );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(userIdParam);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; postId: number | null }>({
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; postId: string | null }>({
     isOpen: false,
     postId: null
   });
 
   useEffect(() => {
     const userIdParam = searchParams.get('userId');
-    setSelectedUserId(userIdParam ? parseInt(userIdParam) : null);
+    setSelectedUserId(userIdParam);
   }, [searchParams]);
 
   const fetchData = useCallback(async () => {
@@ -52,6 +67,7 @@ const PostList = () => {
     } catch (err) {
       setError('Failed to fetch data');
       console.error(err);
+      setToast({ show: true, message: 'Failed to load data', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -61,27 +77,24 @@ const PostList = () => {
     fetchData();
   }, [fetchData]);
 
-  const getUserName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name : `User ${userId}`;
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u._id === userId);
+    return user ? user.name : 'Unknown User';
   };
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     setDeleteModal({ isOpen: true, postId: id });
   };
 
   const confirmDelete = async () => {
     if (deleteModal.postId) {
       try {
-        const post = posts.find(p => p.id === deleteModal.postId);
-        if (!post?.isLocal) {
-          await postAPI.delete(deleteModal.postId);
-        }
-        setPosts(posts.filter(post => post.id !== deleteModal.postId));
+        await postAPI.delete(deleteModal.postId);
+        setPosts(posts.filter(post => post._id !== deleteModal.postId));
         setToast({ show: true, message: 'Post deleted successfully!', type: 'success' });
       } catch (err) {
         setToast({ show: true, message: 'Failed to delete post', type: 'error' });
@@ -92,7 +105,7 @@ const PostList = () => {
   };
 
   const handleEdit = (post: Post) => {
-    setEditingPost(post.id);
+    setEditingPost(post._id);
     setEditFormData({
       title: post.title,
       body: post.body,
@@ -101,15 +114,19 @@ const PostList = () => {
     setShowAddForm(false);
   };
 
-  const handleUpdate = async (id: number) => {
+  const handleUpdate = async (id: string) => {
     try {
-      const post = posts.find(p => p.id === id);
-      if (post?.isLocal) {
-        setPosts(posts.map(p => p.id === id ? { ...p, ...editFormData } : p));
-      } else {
-        await postAPI.update(id, editFormData);
-        setPosts(posts.map(p => p.id === id ? { ...p, ...editFormData } : p));
+      if (!editFormData.title) {
+        setToast({ show: true, message: 'Title is required', type: 'error' });
+        return;
       }
+
+      await postAPI.update(id, {
+        title: editFormData.title,
+        body: editFormData.body
+      });
+
+      await fetchData(); // Listeyi yenile
       setEditingPost(null);
       setEditFormData({});
       setToast({ show: true, message: 'Post updated successfully!', type: 'success' });
@@ -125,14 +142,14 @@ const PostList = () => {
         setToast({ show: true, message: 'Please fill all required fields', type: 'error' });
         return;
       }
-      const newPost = await postAPI.create(addFormData);
-      const uniquePost = {
-        ...newPost,
-        id: Math.max(...posts.map(p => p.id)) + 1,
-        isLocal: true
-      };
-      const updatedPosts = [...posts, uniquePost];
-      setPosts(updatedPosts.sort((a, b) => a.id - b.id));
+
+      await postAPI.create({
+        title: addFormData.title,
+        body: addFormData.body || '',
+        userId: addFormData.userId
+      });
+
+      await fetchData(); // Listeyi yenile
       setShowAddForm(false);
       setAddFormData({});
       setToast({ show: true, message: 'Post added successfully!', type: 'success' });
@@ -149,7 +166,7 @@ const PostList = () => {
     setEditFormData({});
   };
 
-  const handleUserFilter = (userId: number | null) => {
+  const handleUserFilter = (userId: string | null) => {
     setSelectedUserId(userId);
   };
 
@@ -164,7 +181,7 @@ const PostList = () => {
           <button
             onClick={() => {
               setShowAddForm(true);
-              setEditingPost(null); 
+              setEditingPost(null);
             }}
             className="btn-add"
           >
@@ -181,12 +198,12 @@ const PostList = () => {
           <label>Filter by User: </label>
           <select
             value={selectedUserId || ''}
-            onChange={(e) => handleUserFilter(e.target.value ? parseInt(e.target.value) : null)}
+            onChange={(e) => handleUserFilter(e.target.value || null)}
             className="user-filter"
           >
             <option value="">All Users</option>
             {users.map(user => (
-              <option key={user.id} value={user.id}>
+              <option key={user._id} value={user._id}>
                 {user.name}
               </option>
             ))}
@@ -227,11 +244,11 @@ const PostList = () => {
           <h3>Add New Post</h3>
           <select
             value={addFormData.userId || ''}
-            onChange={(e) => setAddFormData({ ...addFormData, userId: parseInt(e.target.value) })}
+            onChange={(e) => setAddFormData({ ...addFormData, userId: e.target.value })}
           >
             <option value="">Select User</option>
             {users.map(user => (
-              <option key={user.id} value={user.id}>
+              <option key={user._id} value={user._id}>
                 {user.name}
               </option>
             ))}
@@ -276,16 +293,16 @@ const PostList = () => {
               </tr>
             ) : (
               filteredPosts.map(post => (
-                <tr key={post.id}>
-                  <td>{post.id}</td>
+                <tr key={post._id}>
+                  <td>{post._id}</td>
                   <td>
-                    {editingPost === post.id ? (
+                    {editingPost === post._id ? (
                       <select
                         value={editFormData.userId || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, userId: parseInt(e.target.value) })}
+                        onChange={(e) => setEditFormData({ ...editFormData, userId: e.target.value })}
                       >
                         {users.map(user => (
-                          <option key={user.id} value={user.id}>
+                          <option key={user._id} value={user._id}>
                             {user.name}
                           </option>
                         ))}
@@ -297,7 +314,7 @@ const PostList = () => {
                     )}
                   </td>
                   <td className="title-cell">
-                    {editingPost === post.id ? (
+                    {editingPost === post._id ? (
                       <input
                         type="text"
                         value={editFormData.title || ''}
@@ -309,9 +326,9 @@ const PostList = () => {
                     )}
                   </td>
                   <td className="actions">
-                    {editingPost === post.id ? (
+                    {editingPost === post._id ? (
                       <>
-                        <button onClick={() => handleUpdate(post.id)} className="btn-save">
+                        <button onClick={() => handleUpdate(post._id)} className="btn-save">
                           <FaSave /> Save
                         </button>
                         <button onClick={handleCancel} className="btn-cancel">
@@ -323,7 +340,7 @@ const PostList = () => {
                         <button onClick={() => handleEdit(post)} className="btn-edit">
                           <FaEdit /> Edit
                         </button>
-                        <button onClick={() => handleDelete(post.id)} className="btn-delete">
+                        <button onClick={() => handleDelete(post._id)} className="btn-delete">
                           <FaTrash /> Delete
                         </button>
                       </>
@@ -338,7 +355,7 @@ const PostList = () => {
         <Modal
           isOpen={deleteModal.isOpen}
           title="Delete Post"
-          message={`Are you sure you want to delete this post? This action cannot be undone.`}
+          message="Are you sure you want to delete this post? This action cannot be undone."
           onConfirm={confirmDelete}
           onCancel={() => setDeleteModal({ isOpen: false, postId: null })}
           confirmText="Delete"

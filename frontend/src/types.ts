@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   name: string;
   username: string;
   email: string;
@@ -23,10 +23,12 @@ export interface User {
   };
 }
 export interface Post {
-  userId: number;
-  id: number;
+  id: string;      
+  userId: string;   
   title: string;
   body?: string;
+  createdAt?: string;
+  updatedAt?: string;
   isLocal?: boolean;
 }
 export interface FormData {

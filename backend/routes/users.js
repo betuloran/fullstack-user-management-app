@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
   try {
     const users = await User.find({}).select('-password');
-    
+
     res.json({
       success: true,
       count: users.length,
@@ -62,8 +62,8 @@ router.post('/', protect, admin, async (req, res) => {
     const { name, username, email, password, role } = req.body;
 
     // Check if user exists
-    const userExists = await User.findOne({ 
-      $or: [{ email }, { username }] 
+    const userExists = await User.findOne({
+      $or: [{ email }, { username }]
     });
 
     if (userExists) {
